@@ -13,7 +13,7 @@ planck_time = 0.0001
 
 def init():
     for i, file in enumerate(files):
-        matlab = scipy.io.loadmat('{}.mat'.format(file))
+        matlab = scipy.io.loadmat('data/{}.mat'.format(file))
         vectors = matlab['Recording'][0][0]
         names = ['Vm', 'WhiskerStimulation', 'Fluorescence', 'Pupilsize', 'Walking', 'Whisking', 'Stepping', 'Time']
         data.append({})
