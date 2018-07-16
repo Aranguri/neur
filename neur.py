@@ -47,39 +47,32 @@ def covariance():
         plt.plot(np.arange(-window, window, definition) * planck_time, covs)
     plt.show()
 
-
 def correlate1():
     bin_size = 100
     window = 10 / (planck_time * bin_size)
     sum = 0
 
     for i in range(0, 5):
-        vm_vector = np.mean(data[i]['Vm'].reshape(-1, bin_size), axis=1)
-        fl_vector = np.mean(data[i]['Fluorescence'].reshape(-1, bin_size), axis=1)
-        vm_vector = (vm_vector - np.mean(vm_vector)) / (np.std(vm_vector) * len(vm_vector))
-        fl_vector = (fl_vector - np.mean(fl_vector)) / (np.std(fl_vector))
-
-        correlation = np.correlate(vm_vector, fl_vector, 'same')
+    #for i, j in [(0, 2), (1, 0), (2, 1), (3, 4), (4, 3)]:
+        correlation = correlate(data[i]['Vm'], data[i]['Fluorescence'], bin_size)
         half = len(correlation) / 2
         correlation = correlation[int(half - window):int(half + window)]
         time = np.arange(-len(correlation) / 2, len(correlation) / 2, 1) * planck_time * bin_size
-    plt.plot(time, correlation)
+        plt.plot(time, correlation)
+    plt.xlabel('Delay from axon activity to cell activity (s)')
+    plt.ylabel('Correlation')
     plt.show()
 
 def correlate2():
     bin_size = 100
     outer_window = 10 / (planck_time * bin_size)
-    inner_window = outer_window / 100
+    inner_window = outer_window / 50
     sum = 0
     real_corrs, fake_corrs = [[], []]
 
     for i in range(0, 5):
-        vm_vector = np.mean(data[i]['Vm'].reshape(-1, bin_size), axis=1)
-        vm_vector = (vm_vector - np.mean(vm_vector)) / (np.std(vm_vector) * len(vm_vector))
         for j in range(0, 5):
-            fl_vector = np.mean(data[j]['Fluorescence'].reshape(-1, bin_size), axis=1)
-            fl_vector = (fl_vector - np.mean(fl_vector)) / (np.std(fl_vector))
-            correlation = np.correlate(vm_vector, fl_vector, 'same')
+            correlation = correlate(data[i]['Vm'], data[j]['Fluorescence'], bin_size)
             half = len(correlation) / 2
             inner = correlation[int(half - inner_window):int(half + inner_window)]
             first = correlation[int(half - outer_window):int(half - inner_window)]
@@ -90,24 +83,24 @@ def correlate2():
             if i == j: real_corrs.append(inner - outer)
             else: fake_corrs.append(inner - outer)
 
-    print(np.std(real_corrs))
-    print(np.std(fake_corrs))
-
-    plt.scatter(np.zeros(len(fake_corrs)), fake_corrs)
-    plt.scatter([0], [np.average(fake_corrs)])
-    plt.scatter(np.ones(len(real_corrs)), real_corrs)
-    plt.scatter([1], [np.average(real_corrs)])
+    f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+    ax1.scatter(np.random.uniform(.95, 1.05, len(fake_corrs)), fake_corrs, 12)
+    ax1.boxplot(fake_corrs, showfliers=False)
+    ax1.set_xticklabels([])
+    ax1.set_xlabel('Shuffled data')
+    ax1.set_ylabel('Correlation bump')
+    ax2.scatter(np.random.uniform(.95, 1.05, len(real_corrs)), real_corrs, 12, 'r')
+    ax2.boxplot(real_corrs, showfliers=False)
+    ax2.set_xticklabels([])
+    ax2.set_xlabel('Real data')
     plt.show()
-    #print (real_corrs)
-    #print (fake_corrs)
-
 
 def plot_data(smoothed=False):
-    window = 20
-    vectors = data[0]
-    vm_vector = vectors['Vm']#[0:20000]
-    fl_vector = vectors['Fluorescence']#[0:20000]
-    time_vector = vectors['Time']#[0:(20000 - window)]
+    window = 100
+    vectors = data[2]
+    vm_vector = vectors['Vm']
+    fl_vector = vectors['Fluorescence']
+    time_vector = vectors['Time'][0:-window]
 
     if smoothed:
         vm_vector = [np.average(vm_vector[(i - window):i]) for i in range(window, len(vm_vector))]
@@ -133,9 +126,15 @@ def wt_test():
         if i in freqs and j != 128:
             j += 1
 
-
     plt.matshow(new_coefs, aspect='auto')
     plt.show()
+
+def correlate(array1, array2, bin_size):
+    array1 = np.mean(array1.reshape(-1, bin_size), axis=1)
+    array2 = np.mean(array2.reshape(-1, bin_size), axis=1)
+    array1 = (array1 - np.mean(array1)) / (np.std(array1) * len(array1))
+    array2 = (array2 - np.mean(array2)) / (np.std(array2))
+    return np.correlate(array1, array2, 'same')
 
 def plot_two_figs(vector1, vector2, time):
     plt.figure(1)
@@ -144,8 +143,18 @@ def plot_two_figs(vector1, vector2, time):
     plt.subplot(212)
     plt.plot(time, vector2)
 
+def near_zero():
+    window = int(1 / planck_time)
+    for i in range(0, 5):
+        correlation = correlate(data[i]['Vm'], data[i]['Fluorescence'], 1)
+        half = int(len(correlation) / 2)
+        correlation = correlation[half - window:half + window]
+        plt.plot(correlation)
+    plt.show()
+
 init()
-correlate2()
-#plot_data()
+#correlate1()
+#plot_data(True)
 #covariance()
 #wt_test()
+near_zero()
